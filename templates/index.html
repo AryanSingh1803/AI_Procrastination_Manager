@@ -1,0 +1,12 @@
+<form id="predictForm">
+    <label>Feature 1 (Total App Usage Hours): <input type="number" name="feature1" required></label><br>
+    <label>Feature 2 (Daily Screen Time Hours): <input type="number" name="feature2" required></label><br>
+    <label>Feature 3 (Social Media Usage Hours): <input type="number" name="feature3" required></label><br>
+    <label>Feature 4 (Productivity App Usage Hours): <input type="number" name="feature4" required></label><br>
+    <label>Feature 5 (Gaming App Usage Hours): <input type="number" name="feature5" required></label><br>
+    <button type="submit">Predict</button>
+</form>
+
+<div id="result"></div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
