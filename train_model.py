@@ -1,8 +1,19 @@
 import pandas as pd
 import joblib
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from xgboost import XGBClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import VotingClassifier
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score, 
+    confusion_matrix, roc_curve, auc
+)
+
+# Enable interactive mode for displaying plots
+plt.ion()
 
 # Load dataset
 df = pd.read_csv("final_data.csv")
@@ -25,11 +36,17 @@ X = df[['Total_App_Usage_Hours', 'Daily_Screen_Time_Hours', 'Social_Media_Usage_
        'Productivity_App_Usage_Hours', 'Gaming_App_Usage_Hours']]
 y = df["Procrastination_Label"]
 
-# Split dataset (80% Train, 20% Test)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Split dataset (70% Train, 30% Test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Train RandomForest Model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
+# Define Base Models
+xgb = XGBClassifier(n_estimators=100, eval_metric='logloss', random_state=42)
+logreg = LogisticRegression(max_iter=200, random_state=42)
+
+# Hybrid Model: Voting Classifier (Soft Voting for better probabilities)
+model = VotingClassifier(estimators=[('xgb', xgb), ('logreg', logreg)], voting='soft')
+
+# Train the hybrid model
 model.fit(X_train, y_train)
 
 # Predict on Train & Test Data
@@ -58,5 +75,32 @@ else:
     print("✅ Model is well-generalized.")
 
 # Save Model
-joblib.dump(model, "procrastination_model.pkl")
-print("✅ Model saved successfully!")
+joblib.dump(model, "procrastination_hybrid_model.pkl")
+print("✅ Hybrid model saved successfully!")
+
+# --- Confusion Matrix ---
+conf_matrix = confusion_matrix(y_test, y_test_pred)
+
+plt.figure(figsize=(6, 4))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['No', 'Yes'], yticklabels=['No', 'Yes'])
+plt.xlabel("Predicted Label")
+plt.ylabel("Actual Label")
+plt.title("Confusion Matrix")
+plt.show()
+
+# --- ROC Curve ---
+y_test_proba = model.predict_proba(X_test)[:, 1]
+fpr, tpr, _ = roc_curve(y_test, y_test_proba)
+roc_auc = auc(fpr, tpr)
+
+plt.figure(figsize=(6, 4))
+plt.plot(fpr, tpr, color='blue', label=f'ROC Curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("Receiver Operating Characteristic (ROC) Curve")
+plt.legend()
+plt.show()
+
+# Ensure all plots are displayed
+plt.show(block=True)
